@@ -21,16 +21,29 @@ def show_ops():
     print("    [3r] Run ")
     print("    [3s] Stop")
     print()
+    print("--- rabbitmq ---")
+    print()
+    print("    [4r] Run ")
+    print("    [4s] Stop")
+    print()
 
 def switch(operation):
     if operation == "1r":
         return startPostgres()
     elif operation == "1s":
         return stopPostgres()
+    if operation == "2r":
+        return startNginx()
+    elif operation == "2s":
+        return stopNginx()
     elif operation == "3r":
         return startCrawleeServer()
     elif operation == "3s":
         return stopCrawleeServer()
+    elif operation == "4r":
+        return startRabbitMq()
+    elif operation == "4s":
+        return stopRabbitMq()
     
 def startPostgres():
     print("Starting postgres...")
@@ -40,6 +53,14 @@ def stopPostgres():
     print("Stopping postgres...")
     os.system("docker stop postgresql2")
 
+def startNginx():
+    print("Starting nginx...")
+    os.system("systemctl start nginx")
+
+def stopNginx():
+    print("Stopping nginx...")
+    os.system("systemctl stop nginx")
+
 def startCrawleeServer():
     print("Starting crawlee server...")
     subprocess.run(["./src/bash/start_crawlee_server.sh", ""], shell=True)
@@ -47,6 +68,14 @@ def startCrawleeServer():
 def stopCrawleeServer():
     print("Stopping crawlee server...")
     subprocess.run(["./src/bash/stop_crawlee_server.sh", ""], shell=True)
+
+def startRabbitMq():
+    print("Starting rabbitmq...")
+    os.system("docker start rabbitmq")
+
+def stopRabbitMq():
+    print("Stopping rabbitmq...")
+    os.system("docker stop rabbitmq")
 
 #
 # main
