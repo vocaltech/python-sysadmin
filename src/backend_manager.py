@@ -27,6 +27,12 @@ def show_ops():
     print("    [4s] Stop")
     print()
 
+    print("--- php7.4-fpm ---")
+    print()
+    print("    [5r] Run ")
+    print("    [5s] Stop")
+    print()
+
 def switch(operation):
     if operation == "1r":
         return startPostgres()
@@ -44,6 +50,10 @@ def switch(operation):
         return startRabbitMq()
     elif operation == "4s":
         return stopRabbitMq()
+    elif operation == "5r":
+        return startPhp()
+    elif operation == "5s":
+        return stopPhp()
     
 def startPostgres():
     print("Starting postgres...")
@@ -76,6 +86,14 @@ def startRabbitMq():
 def stopRabbitMq():
     print("Stopping rabbitmq...")
     os.system("docker stop rabbitmq")
+
+def startPhp():
+    print("Starting php...")
+    os.system("systemctl start php7.4-fpm")
+
+def stopPhp():
+    print("Stopping php...")
+    os.system("systemctl stop php7.4-fpm")
 
 #
 # main
