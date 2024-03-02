@@ -60,3 +60,6 @@ addRule(getSSHRemoteIp(), "27017", "tcp")
 deleteRule("3306")
 addRule(getSSHRemoteIp(), "3306", "tcp")
 
+# Update rule with port 8000 (symfony)
+deleteRule("8000")
+addRule(getSSHRemoteIp(), "8000", "tcp")
