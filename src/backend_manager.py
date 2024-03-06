@@ -2,6 +2,8 @@ import os
 import subprocess
 
 def show_ops():
+    os.system("clear")
+
     print("=============================")
     print("=     Backend Manager       =")
     print("=============================")
@@ -33,6 +35,12 @@ def show_ops():
     print("    [5s] Stop")
     print()
 
+    print("--- spring-android-users-locations.service ---")
+    print()
+    print("    [6r] Run ")
+    print("    [6s] Stop")
+    print()
+
 def switch(operation):
     if operation == "1r":
         return startPostgres()
@@ -54,6 +62,10 @@ def switch(operation):
         return startPhp()
     elif operation == "5s":
         return stopPhp()
+    elif operation == "6r":
+        return startSpringAndroidUsersLocations()
+    elif operation == "6s":
+        return stopSpringAndroidUsersLocations()
     
 def startPostgres():
     print("Starting postgres...")
@@ -94,6 +106,17 @@ def startPhp():
 def stopPhp():
     print("Stopping php...")
     os.system("systemctl stop php7.4-fpm")
+
+def startSpringAndroidUsersLocations():
+    print("Starting SpringAndroidUssersLocations...")
+    print("--- dependencies: rabbitmq ---")
+    os.system("systemctl start spring-android-users-locations.service ")
+
+def stopSpringAndroidUsersLocations():
+    print("Stopping SpringAndroidUssersLocations...")
+    print("--- dependencies: rabbitmq ---")
+    os.system("systemctl stop spring-android-users-locations.service ")
+
 
 #
 # main
