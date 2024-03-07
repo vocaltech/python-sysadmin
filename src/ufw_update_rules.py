@@ -63,3 +63,7 @@ addRule(getSSHRemoteIp(), "3306", "tcp")
 # Update rule with port 8000 (symfony)
 deleteRule("8000")
 addRule(getSSHRemoteIp(), "8000", "tcp")
+
+# Update rule with port 8081 (spring-android)
+deleteRule("8081")
+addRule(getSSHRemoteIp(), "8081", "tcp")
