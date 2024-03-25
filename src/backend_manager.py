@@ -1,45 +1,61 @@
 import os
 import subprocess
+import datetime
+import time
+import re
 
-def show_ops():
+from rich import print
+from rich.console import Console
+from rich.table import Table
+from rich.live import Live
+
+# global variables
+console = Console()
+
+def show_table() -> Table:
     os.system("clear")
 
-    print("=============================")
-    print("=     Backend Manager       =")
-    print("=============================")
-    print()
-    print("--- postgresql ---")
-    print()
-    print("    [1r] Run")
-    print("    [1s] Stop")
-    print()
-    print("--- nginx ---")
-    print()
-    print("    [2r] Run")
-    print("    [2s] Stop")
-    print()
-    print("--- crawlee.server ---")
-    print()
-    print("    [3r] Run ")
-    print("    [3s] Stop")
-    print()
-    print("--- rabbitmq ---")
-    print()
-    print("    [4r] Run ")
-    print("    [4s] Stop")
-    print()
+    table = Table(show_header=True, header_style="bold orange1")
 
-    print("--- php7.4-fpm ---")
-    print()
-    print("    [5r] Run ")
-    print("    [5s] Stop")
-    print()
+    # headers
+    table.add_column("Date", style="dim", width=28)
+    table.add_column("Service", min_width=28)
+    table.add_column("Commands", style="dim", width=20)
 
-    print("--- spring-android-users-locations.service ---")
-    print()
-    print("    [6r] Run ")
-    print("    [6s] Stop")
-    print()
+    # rows
+    current_ts = datetime.datetime.now().isoformat()
+
+    if isDockerStarted("postgresql2"):
+        table.add_row(current_ts, "[bold white on green]postgresql[/bold white on green]", "[1r] Run / [1s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]postgresql[/dim]", "[1r] Run / [1s] Stop")
+
+    if isSystemCtlStarted("nginx"):
+        table.add_row(current_ts, "[bold white on green]nginx[/bold white on green]", "[2r] Run / [2s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]nginx[/dim]", "[2r] Run / [2s] Stop")
+        
+    if isPM2Started("crawlee.server"):
+        table.add_row(current_ts, "[bold white on green]crawlee.server[/bold white on green]", "[3r] Run / [3s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]crawlee.server[/dim]", "[3r] Run / [3s] Stop")
+
+    if isDockerStarted("rabbitmq"):
+        table.add_row(current_ts, "[bold white on green]rabbitMQ[/bold white on green]", "[4r] Run / [4s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]rabbitMQ[/dim]", "[4r] Run / [4s] Stop")
+
+    if isSystemCtlStarted("php7.4-fpm"):
+        table.add_row(current_ts, "[bold white on green]php7.4-fpm[/bold white on green]", "[5r] Run / [5s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]php7.4-fpm[/dim]", "[5r] Run / [5s] Stop")
+
+    if isSystemCtlStarted("spring-android-users-locations.service"):
+        table.add_row(current_ts, "[bold white on green]spring-android-users-locations.service[/bold white on green]", "[6r] Run / [6s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]spring-android-users-locations.service[/dim]", "[6r] Run / [6s] Stop")
+
+    return table
 
 def switch(operation):
     if operation == "1r":
@@ -108,24 +124,60 @@ def stopPhp():
     os.system("systemctl stop php7.4-fpm")
 
 def startSpringAndroidUsersLocations():
-    print("Starting SpringAndroidUssersLocations...")
-    print("--- dependencies: rabbitmq ---")
+    print("[bold yellow]Starting SpringAndroidUssersLocations...[/bold yellow]")
+
+    # dependency: rabbitmq
+    if not isDockerStarted("rabbitmq"):
+        startRabbitMq()
+
     os.system("systemctl start spring-android-users-locations.service ")
 
 def stopSpringAndroidUsersLocations():
-    print("Stopping SpringAndroidUssersLocations...")
-    print("--- dependencies: rabbitmq ---")
+    print("[bold yellow]Stopping SpringAndroidUssersLocations...[/bold yellow]")
     os.system("systemctl stop spring-android-users-locations.service ")
+    
+def isSystemCtlStarted(service: str) -> bool:
+    cmd = "systemctl status " + service
+    result = os.popen(cmd).read()
+    regx = re.findall("Active.*", result)
+    status: str = regx[0].split(": ")[1]
+    if (status.startswith("inactive")):
+        return False
+    else:
+        return True
+
+def isDockerStarted(service: str) -> bool:
+    cmd = "docker ps"
+    result = os.popen(cmd).read()
+    regx = re.findall(service, result)
+    if len(regx) > 0:
+        return True
+    else:
+        return False
+
+def isPM2Started(service: str) -> bool:
+    subp = subprocess.run(["./src/bash/status_pm2.sh", ""], shell=True, text=True, capture_output=True)
+    pm2Res = subp.stdout
+
+    lineApp = pm2Res.split("\n")[3]
+    regx = re.findall(service, lineApp)
+
+    ### search online | offline
+
+    if len(regx) > 0:
+        return True
+    else:
+        return False
 
 
 #
 # main
 #
-show_ops()
-print()
-
 operation = ""
 
-while (operation != "x"):
-    operation = input("Choose an operation ('x' to exit): ")
-    switch(operation)
+with Live(show_table(), refresh_per_second=5) as live:
+    while (operation != "x"):
+        live.update(show_table())
+        operation = input("Choose an operation ('x' to exit): ")
+        switch(operation)
+        time.sleep(0.4)
