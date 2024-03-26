@@ -5,7 +5,7 @@ This script updates some ufw rules for a given ssh_remote ip
 
 > backend_manager.py
 
-A tool to manage backend apps
+A CLI tool to manage backend apps
 
 > migrate_mongo_to_postgres.py
 
