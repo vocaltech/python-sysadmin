@@ -13,8 +13,6 @@ from rich.live import Live
 console = Console()
 
 def show_table() -> Table:
-    os.system("clear")
-
     table = Table(show_header=True, header_style="bold orange1")
 
     # headers
@@ -24,7 +22,8 @@ def show_table() -> Table:
 
     # rows
     current_ts = datetime.datetime.now().isoformat()
-
+    
+    """
     if isDockerStarted("postgresql2"):
         table.add_row(current_ts, "[bold white on green]postgresql[/bold white on green]", "[1r] Run / [1s] Stop")
     else:
@@ -54,6 +53,23 @@ def show_table() -> Table:
         table.add_row(current_ts, "[bold white on green]spring-android-users-locations.service[/bold white on green]", "[6r] Run / [6s] Stop")
     else:
         table.add_row(current_ts, "[dim]spring-android-users-locations.service[/dim]", "[6r] Run / [6s] Stop")
+
+    """
+
+    if isDockerStarted("postgresql2"):
+        table.add_row(current_ts, "[bold white on green]postgresql[/bold white on green]", "[1r] Run / [1s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]postgresql[/dim]", "[1r] Run / [1s] Stop")
+
+    if isSystemCtlStarted("nginx"):
+        table.add_row(current_ts, "[bold white on green]nginx[/bold white on green]", "[2r] Run / [2s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]nginx[/dim]", "[2r] Run / [2s] Stop")
+
+    if isPM2Started("crawlee.server"):
+        table.add_row(current_ts, "[bold white on green]crawlee.server[/bold white on green]", "[3r] Run / [3s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]crawlee.server[/dim]", "[3r] Run / [3s] Stop")
 
     return table
 
@@ -141,6 +157,9 @@ def isSystemCtlStarted(service: str) -> bool:
     result = os.popen(cmd).read()
     regx = re.findall("Active.*", result)
     status: str = regx[0].split(": ")[1]
+
+    print(f'isSystemCtlStarted({service}) - status: {status}')
+
     if (status.startswith("inactive")):
         return False
     else:
@@ -150,6 +169,9 @@ def isDockerStarted(service: str) -> bool:
     cmd = "docker ps"
     result = os.popen(cmd).read()
     regx = re.findall(service, result)
+
+    print(f'isDockerStarted({service}) - regx: {regx} - status: {len(regx)}')
+
     if len(regx) > 0:
         return True
     else:
@@ -158,13 +180,18 @@ def isDockerStarted(service: str) -> bool:
 def isPM2Started(service: str) -> bool:
     subp = subprocess.run(["./src/bash/status_pm2.sh", ""], shell=True, text=True, capture_output=True)
     pm2Res = subp.stdout
-
     lineApp = pm2Res.split("\n")[3]
+
     regx = re.findall(service, lineApp)
 
-    ### search online | offline
+    stripLineApp = lineApp.replace(' ', '')
+    tokens = stripLineApp.split(chr(9474))
+    status = tokens[9]
 
-    if len(regx) > 0:
+    print(f'isPM2Started({service}) - lineApp: {lineApp}')
+    print(f'isPM2Started({service}) - regx: {regx} - status: {status}')
+
+    if status == "online":
         return True
     else:
         return False
@@ -177,7 +204,9 @@ operation = ""
 
 with Live(show_table(), refresh_per_second=5) as live:
     while (operation != "x"):
+        os.system("clear")
+        time.sleep(0.4)
         live.update(show_table())
         operation = input("Choose an operation ('x' to exit): ")
         switch(operation)
-        time.sleep(0.4)
+
