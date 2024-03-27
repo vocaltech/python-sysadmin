@@ -12,6 +12,28 @@ from rich.live import Live
 # global variables
 console = Console()
 
+services = {
+    "postgresql2": {
+        "type": "docker",
+        "activated": False
+    },
+
+    "nginx": {
+        "type": "systemctl",
+        "activated": False
+    },
+
+    "rabbitmq": {
+        "type": "docker",
+        "activated": False
+    },
+
+    "php7.4-fpm": {
+        "type": "systemctl",
+        "activated": False
+    }
+}
+
 def show_table() -> Table:
     table = Table(show_header=True, header_style="bold orange1")
 
@@ -23,8 +45,8 @@ def show_table() -> Table:
     # rows
     current_ts = datetime.datetime.now().isoformat()
     
-    """
-    if isDockerStarted("postgresql2"):
+    #if isDockerStarted("postgresql2"):
+    if services["postgresql2"]["activated"]:
         table.add_row(current_ts, "[bold white on green]postgresql[/bold white on green]", "[1r] Run / [1s] Stop")
     else:
         table.add_row(current_ts, "[dim]postgresql[/dim]", "[1r] Run / [1s] Stop")
@@ -54,67 +76,34 @@ def show_table() -> Table:
     else:
         table.add_row(current_ts, "[dim]spring-android-users-locations.service[/dim]", "[6r] Run / [6s] Stop")
 
-    """
-
-    if isDockerStarted("postgresql2"):
-        table.add_row(current_ts, "[bold white on green]postgresql[/bold white on green]", "[1r] Run / [1s] Stop")
-    else:
-        table.add_row(current_ts, "[dim]postgresql[/dim]", "[1r] Run / [1s] Stop")
-
-    if isSystemCtlStarted("nginx"):
-        table.add_row(current_ts, "[bold white on green]nginx[/bold white on green]", "[2r] Run / [2s] Stop")
-    else:
-        table.add_row(current_ts, "[dim]nginx[/dim]", "[2r] Run / [2s] Stop")
-
-    if isPM2Started("crawlee.server"):
-        table.add_row(current_ts, "[bold white on green]crawlee.server[/bold white on green]", "[3r] Run / [3s] Stop")
-    else:
-        table.add_row(current_ts, "[dim]crawlee.server[/dim]", "[3r] Run / [3s] Stop")
-
     return table
 
 def switch(operation):
     if operation == "1r":
-        return startPostgres()
+        return dockerService("postgresql2", "start")
     elif operation == "1s":
-        return stopPostgres()
+        return dockerService("postgresql2", "stop")
     if operation == "2r":
-        return startNginx()
+        return systemctlService("nginx", "start")
     elif operation == "2s":
-        return stopNginx()
+        return systemctlService("nginx", "stop")
     elif operation == "3r":
         return startCrawleeServer()
     elif operation == "3s":
         return stopCrawleeServer()
     elif operation == "4r":
-        return startRabbitMq()
+        return dockerService("rabbitmq", "start")
     elif operation == "4s":
-        return stopRabbitMq()
+        return dockerService("rabbitmq", "stop")
     elif operation == "5r":
-        return startPhp()
+        return systemctlService("php7.4-fpm", "start")
     elif operation == "5s":
-        return stopPhp()
+        return systemctlService("php7.4-fpm", "stop")
     elif operation == "6r":
         return startSpringAndroidUsersLocations()
     elif operation == "6s":
         return stopSpringAndroidUsersLocations()
     
-def startPostgres():
-    print("Starting postgres...")
-    os.system("docker start postgresql2")
-
-def stopPostgres():
-    print("Stopping postgres...")
-    os.system("docker stop postgresql2")
-
-def startNginx():
-    print("Starting nginx...")
-    os.system("systemctl start nginx")
-
-def stopNginx():
-    print("Stopping nginx...")
-    os.system("systemctl stop nginx")
-
 def startCrawleeServer():
     print("Starting crawlee server...")
     subprocess.run(["./src/bash/start_crawlee_server.sh", ""], shell=True)
@@ -123,34 +112,19 @@ def stopCrawleeServer():
     print("Stopping crawlee server...")
     subprocess.run(["./src/bash/stop_crawlee_server.sh", ""], shell=True)
 
-def startRabbitMq():
-    print("Starting rabbitmq...")
-    os.system("docker start rabbitmq")
-
-def stopRabbitMq():
-    print("Stopping rabbitmq...")
-    os.system("docker stop rabbitmq")
-
-def startPhp():
-    print("Starting php...")
-    os.system("systemctl start php7.4-fpm")
-
-def stopPhp():
-    print("Stopping php...")
-    os.system("systemctl stop php7.4-fpm")
-
 def startSpringAndroidUsersLocations():
     print("[bold yellow]Starting SpringAndroidUssersLocations...[/bold yellow]")
 
     # dependency: rabbitmq
     if not isDockerStarted("rabbitmq"):
-        startRabbitMq()
+        dockerService("rabbitmq", "start")
 
-    os.system("systemctl start spring-android-users-locations.service ")
+    os.system("systemctl start  ")
+    systemctlService("spring-android-users-locations.service", "start")
 
 def stopSpringAndroidUsersLocations():
     print("[bold yellow]Stopping SpringAndroidUssersLocations...[/bold yellow]")
-    os.system("systemctl stop spring-android-users-locations.service ")
+    systemctlService("spring-android-users-locations.service", "stop")
     
 def isSystemCtlStarted(service: str) -> bool:
     cmd = "systemctl status " + service
@@ -195,16 +169,47 @@ def isPM2Started(service: str) -> bool:
         return True
     else:
         return False
+    
+def systemctlService(service: str, action: str):
+    command = f'systemctl {action} {service}'
+    print(command)
+    os.system(command)
 
+    # update services
+
+
+def dockerService(service: str, action: str):
+    command = f'docker {action} {service}'
+    print(command)
+    os.system(command)
+
+    # update services
+    if action == "start":
+        services[service]["activated"] = True
+    elif action == "stop":
+        services[service]["activated"] = False
+
+def initServices():
+    for service, value in services.items():
+        if value["type"] == "docker":
+            value["activated"] = isDockerStarted(service)
+            
+        elif value["type"] == "systemctl":
+            value["activated"] = isSystemCtlStarted(service)
+
+    for service, value in services.items():
+        print(service, value)
 
 #
 # main
 #
 operation = ""
 
+initServices()
+
 with Live(show_table(), refresh_per_second=5) as live:
     while (operation != "x"):
-        os.system("clear")
+        #os.system("clear")
         time.sleep(0.4)
         live.update(show_table())
         operation = input("Choose an operation ('x' to exit): ")
