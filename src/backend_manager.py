@@ -31,6 +31,16 @@ services = {
     "php7.4-fpm": {
         "type": "systemctl",
         "activated": False
+    },
+
+    "redis-stack": {
+        "type": "docker",
+        "activated": False
+    },
+
+    "spring-android-users-locations.service": {
+        "type": "systemctl",
+        "activated": False
     }
 }
 
@@ -51,7 +61,8 @@ def show_table() -> Table:
     else:
         table.add_row(current_ts, "[dim]postgresql[/dim]", "[1r] Run / [1s] Stop")
 
-    if isSystemCtlStarted("nginx"):
+    #if isSystemCtlStarted("nginx"):
+    if services["nginx"]["activated"]:
         table.add_row(current_ts, "[bold white on green]nginx[/bold white on green]", "[2r] Run / [2s] Stop")
     else:
         table.add_row(current_ts, "[dim]nginx[/dim]", "[2r] Run / [2s] Stop")
@@ -61,20 +72,29 @@ def show_table() -> Table:
     else:
         table.add_row(current_ts, "[dim]crawlee.server[/dim]", "[3r] Run / [3s] Stop")
 
-    if isDockerStarted("rabbitmq"):
+    #if isDockerStarted("rabbitmq"):
+    if services["rabbitmq"]["activated"]:
         table.add_row(current_ts, "[bold white on green]rabbitMQ[/bold white on green]", "[4r] Run / [4s] Stop")
     else:
         table.add_row(current_ts, "[dim]rabbitMQ[/dim]", "[4r] Run / [4s] Stop")
 
-    if isSystemCtlStarted("php7.4-fpm"):
+    #if isSystemCtlStarted("php7.4-fpm"):
+    if services["php7.4-fpm"]["activated"]:
         table.add_row(current_ts, "[bold white on green]php7.4-fpm[/bold white on green]", "[5r] Run / [5s] Stop")
     else:
         table.add_row(current_ts, "[dim]php7.4-fpm[/dim]", "[5r] Run / [5s] Stop")
 
-    if isSystemCtlStarted("spring-android-users-locations.service"):
+    #if isSystemCtlStarted("spring-android-users-locations.service"):
+    if services["spring-android-users-locations.service"]["activated"]:
         table.add_row(current_ts, "[bold white on green]spring-android-users-locations.service[/bold white on green]", "[6r] Run / [6s] Stop")
     else:
         table.add_row(current_ts, "[dim]spring-android-users-locations.service[/dim]", "[6r] Run / [6s] Stop")
+
+    #if isDockerStarted("redis-stack"):
+    if services["redis-stack"]["activated"]:
+        table.add_row(current_ts, "[bold white on green]redis[/bold white on green]", "[7r] Run / [7s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]redis[/dim]", "[7r] Run / [7s] Stop")
 
     return table
 
@@ -103,6 +123,10 @@ def switch(operation):
         return startSpringAndroidUsersLocations()
     elif operation == "6s":
         return stopSpringAndroidUsersLocations()
+    elif operation == "7r":
+        return dockerService("redis-stack", "start")
+    elif operation == "7s":
+        return dockerService("redis-stack", "stop")
     
 def startCrawleeServer():
     print("Starting crawlee server...")
@@ -176,6 +200,10 @@ def systemctlService(service: str, action: str):
     os.system(command)
 
     # update services
+    if action == "start":
+        services[service]["activated"] = True
+    elif action == "stop":
+        services[service]["activated"] = False
 
 
 def dockerService(service: str, action: str):
@@ -190,6 +218,7 @@ def dockerService(service: str, action: str):
         services[service]["activated"] = False
 
 def initServices():
+    print("=== initServices() ===")
     for service, value in services.items():
         if value["type"] == "docker":
             value["activated"] = isDockerStarted(service)
@@ -207,7 +236,7 @@ operation = ""
 
 initServices()
 
-with Live(show_table(), refresh_per_second=5) as live:
+with Live(show_table(), refresh_per_second=6) as live:
     while (operation != "x"):
         #os.system("clear")
         time.sleep(0.4)
