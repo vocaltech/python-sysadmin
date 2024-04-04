@@ -41,6 +41,11 @@ services = {
     "spring-android-users-locations.service": {
         "type": "systemctl",
         "activated": False
+    },
+
+    "webscraper.service": {
+        "type": "systemctl",
+        "activated": False
     }
 }
 
@@ -96,6 +101,11 @@ def show_table() -> Table:
     else:
         table.add_row(current_ts, "[dim]redis[/dim]", "[7r] Run / [7s] Stop")
 
+    if services["webscraper.service"]["activated"]:
+        table.add_row(current_ts, "[bold white on green]webscraper.service[/bold white on green]", "[8r] Run / [8s] Stop")
+    else:
+        table.add_row(current_ts, "[dim]webscraper.service[/dim]", "[8r] Run / [8s] Stop")
+
     return table
 
 def switch(operation):
@@ -127,6 +137,10 @@ def switch(operation):
         return dockerService("redis-stack", "start")
     elif operation == "7s":
         return dockerService("redis-stack", "stop")
+    elif operation == "8r":
+        return systemctlService("webscraper.service", "start")
+    elif operation == "8s":
+        return systemctlService("webscraper.service", "stop")
     
 def startCrawleeServer():
     print("Starting crawlee server...")
@@ -143,7 +157,6 @@ def startSpringAndroidUsersLocations():
     if not isDockerStarted("rabbitmq"):
         dockerService("rabbitmq", "start")
 
-    os.system("systemctl start  ")
     systemctlService("spring-android-users-locations.service", "start")
 
 def stopSpringAndroidUsersLocations():
